@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#065F46">
+<title>SIM BPD — Sistem Informasi Badan Permusyawaratan Desa</title>
+<meta name="description" content="Dashboard administrasi BPD: 15 buku agenda, surat otomatis, cetak PDF.">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" id="apple-icon" href="">
+<link rel="icon" id="fav-icon" href="">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --maroon-950:#052E22;
+  --maroon-800:#065F46;
+  --maroon-700:#047857;
+  --maroon-600:#0E9668;
+  --gold-600:#B8892B;
+  --gold-400:#D9AE55;
+  --navy-900:#052E22;
+  --navy-800:#0B4433;
+  --paper:#F7F2E4;
+  --paper-line:#E4D9BC;
+  --ink:#241B15;
+  --ink-soft:#5C5044;
+  --ok:#2F7A4F;
+  --danger:#B23B3B;
+  --radius:14px;
+  --shadow:0 10px 30px -12px rgba(20,12,8,.35);
+  font-family:'Plus Jakarta Sans',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--navy-900);
+  color:var(--ink);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,.serif{font-family:'Lora',serif}
+::selection{background:var(--gold-400);color:var(--maroon-950)}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit}
+a{color:inherit}
+
+/* ---------- Splash ---------- */
+#splash{
+  position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  background:radial-gradient(120% 120% at 50% 0%,var(--maroon-800),var(--navy-900) 70%);
+  color:#F3E7C9;z-index:9999;
+}
+#splash .ring{
+  width:74px;height:74px;border-radius:50%;
+  border:3px solid rgba(216,174,85,.25);border-top-color:var(--gold-400);
+  animation:spin 1s linear infinite;
+}
+#splash img{width:64px;height:64px;object-fit:contain;position:absolute}
+@keyframes spin{to{transform:rotate(360deg)}}
+#splash p{opacity:.75;font-size:13px;letter-spacing:.04em}
+
+/* ---------- App shell ---------- */
+#app{display:none;min-height:100vh}
+#app.ready{display:flex}
+
+.sidebar{
+  width:264px;flex:none;
+  background:linear-gradient(180deg,var(--navy-900),var(--navy-800));
+  color:#E9E3D5;
+  display:flex;flex-direction:column;
+  position:sticky;top:0;height:100vh;overflow-y:auto;
+  border-right:1px solid rgba(216,174,85,.15);
+}
+.sidebar::-webkit-scrollbar{width:6px}
+.sidebar::-webkit-scrollbar-thumb{background:rgba(216,174,85,.25);border-radius:6px}
+.brand{
+  display:flex;align-items:center;gap:12px;padding:20px 18px 16px;
+  border-bottom:1px solid rgba(216,174,85,.15);
+}
+.brand img{width:40px;height:40px;object-fit:contain;flex:none;filter:drop-shadow(0 2px 6px rgba(0,0,0,.4))}
+.brand .b-name{font-family:'Lora',serif;font-weight:700;font-size:15px;line-height:1.2;color:#F3E7C9}
+.brand .b-sub{font-size:11px;color:#B8ABA0;letter-spacing:.03em}
+
+.nav-group{padding:14px 10px 6px}
+.nav-group .g-title{font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;color:#9C8F82;padding:6px 10px 8px;font-weight:700}
+.nav-item{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  padding:9px 10px;border-radius:10px;border:none;background:transparent;color:#DCD3C4;
+  font-size:13.3px;font-weight:500;margin-bottom:2px;transition:background .15s;
+}
+.nav-item .ic{width:20px;height:20px;flex:none;display:flex;align-items:center;justify-content:center;font-size:14px;border-radius:6px;background:rgba(216,174,85,.12);color:var(--gold-400)}
+.nav-item:hover{background:rgba(255,255,255,.06)}
+.nav-item.active{background:linear-gradient(90deg,var(--maroon-700),var(--maroon-600));color:#fff;box-shadow:var(--shadow)}
+.nav-item.active .ic{background:rgba(255,255,255,.18);color:#F3E7C9}
+.sidebar-foot{margin-top:auto;padding:14px 16px 18px;font-size:11px;color:#8B7F72;border-top:1px solid rgba(216,174,85,.12)}
+
+.main{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--paper)}
+.topbar{
+  position:sticky;top:0;z-index:20;background:var(--paper);
+  display:flex;align-items:center;gap:14px;padding:14px 22px;
+  border-bottom:1px solid var(--paper-line);
+}
+#menuToggle{display:none;background:none;border:1px solid var(--paper-line);border-radius:10px;width:38px;height:38px;font-size:17px;color:var(--ink)}
+.topbar h1{font-size:19px;margin:0;font-weight:700;color:var(--maroon-800)}
+.topbar .crumb{font-size:12px;color:var(--ink-soft)}
+.topbar .spacer{flex:1}
+.offline-pill{display:none;align-items:center;gap:6px;background:#3A2224;color:#F3C6C6;font-size:11.5px;padding:5px 10px;border-radius:999px;font-weight:600}
+.offline-pill.show{display:flex}
+
+#content{padding:22px;flex:1}
+
+/* ---------- Cards / dashboard ---------- */
+.grid-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:22px}
+.card{
+  background:#fff;border:1px solid var(--paper-line);border-radius:var(--radius);
+  padding:16px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden;
+}
+.card .k{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);font-weight:700}
+.card .v{font-family:'Lora',serif;font-size:26px;font-weight:700;color:var(--maroon-800);margin-top:6px}
+.card .accent{position:absolute;right:-14px;top:-14px;width:64px;height:64px;border-radius:50%;background:var(--gold-400);opacity:.15}
+
+.seal{
+  width:108px;height:108px;border-radius:50%;border:3px solid var(--gold-600);
+  display:flex;align-items:center;justify-content:center;text-align:center;flex:none;
+  background:repeating-conic-gradient(from 0deg,rgba(184,137,43,.08) 0 10deg,transparent 10deg 20deg);
+  color:var(--maroon-700);font-family:'Lora',serif;font-weight:700;font-size:10.5px;line-height:1.25;padding:8px;
+}
+
+.panel{background:#fff;border:1px solid var(--paper-line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.panel-head{
+  display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--paper-line);
+}
+.panel-head h2{margin:0;font-size:16.5px;color:var(--maroon-800)}
+.panel-head .desc{font-size:12px;color:var(--ink-soft);margin-top:2px}
+.panel-head .spacer{flex:1}
+
+.search-box{position:relative}
+.search-box input{
+  padding:9px 12px 9px 32px;border:1px solid var(--paper-line);border-radius:10px;font-size:13px;width:200px;background:var(--paper)
+}
+.search-box::before{content:"⌕";position:absolute;left:11px;top:8px;color:var(--ink-soft);font-size:15px}
+
+.btn{
+  display:inline-flex;align-items:center;gap:7px;border:none;border-radius:10px;padding:9px 14px;
+  font-size:13px;font-weight:600;transition:transform .1s, opacity .15s;
+}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(135deg,var(--maroon-600),var(--maroon-800));color:#fff;box-shadow:0 6px 16px -6px rgba(110,30,43,.6)}
+.btn-gold{background:linear-gradient(135deg,var(--gold-400),var(--gold-600));color:#3A2500}
+.btn-ghost{background:transparent;border:1px solid var(--paper-line);color:var(--ink)}
+.btn-danger{background:#F6E4E4;color:var(--danger)}
+.btn-sm{padding:6px 10px;font-size:12px;border-radius:8px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{
+  text-align:left;background:#FBF7EC;color:var(--maroon-800);font-weight:700;font-size:11.5px;
+  text-transform:uppercase;letter-spacing:.03em;padding:10px 12px;border-bottom:2px solid var(--paper-line);white-space:nowrap;
+}
+tbody td{padding:10px 12px;border-bottom:1px solid var(--paper-line);vertical-align:top;max-width:280px}
+tbody tr:hover{background:#FCFAF2}
+.row-actions{display:flex;gap:6px;white-space:nowrap}
+.tbl-wrap{overflow:auto;max-height:60vh}
+.empty-state{padding:50px 20px;text-align:center;color:var(--ink-soft)}
+.empty-state .ic{font-size:34px;margin-bottom:8px}
+
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#EFE3C8;color:#7A5A17}
+
+/* ---------- Modal ---------- */
+.overlay{position:fixed;inset:0;background:rgba(20,14,10,.55);display:none;align-items:flex-start;justify-content:center;padding:26px 14px;z-index:100;overflow:auto}
+.overlay.show{display:flex}
+.modal{background:#fff;border-radius:16px;width:100%;max-width:560px;box-shadow:0 30px 60px -20px rgba(0,0,0,.5);animation:pop .18s ease}
+@keyframes pop{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-head{display:flex;align-items:center;padding:16px 20px;border-bottom:1px solid var(--paper-line)}
+.modal-head h3{margin:0;font-size:16px;color:var(--maroon-800)}
+.modal-head .spacer{flex:1}
+.modal-close{background:none;border:none;font-size:20px;color:var(--ink-soft);width:30px;height:30px;border-radius:8px}
+.modal-close:hover{background:#F2ECDD}
+.modal-body{padding:18px 20px;max-height:70vh;overflow:auto}
+.modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:14px 20px;border-top:1px solid var(--paper-line)}
+
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12.5px;font-weight:700;color:var(--ink-soft);margin-bottom:5px}
+.field .hint{font-size:11px;color:var(--ink-soft);opacity:.8;margin-top:4px}
+.field input,.field select,.field textarea{
+  width:100%;padding:10px 12px;border:1px solid var(--paper-line);border-radius:10px;font-size:13.5px;background:var(--paper);color:var(--ink)
+}
+.field textarea{min-height:74px;resize:vertical}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--gold-400);outline-offset:1px;border-color:var(--gold-600)}
+.nomor-row{display:flex;gap:8px}
+.nomor-row input{font-family:'JetBrains Mono',monospace}
+
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--paper-line);margin-bottom:16px;flex-wrap:wrap}
+.tab{padding:8px 4px;font-size:13px;font-weight:600;color:var(--ink-soft);border:none;background:none;border-bottom:2px solid transparent;margin-right:12px}
+.tab.active{color:var(--maroon-700);border-color:var(--maroon-700)}
+
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
+@media(max-width:640px){.settings-grid{grid-template-columns:1fr}}
+
+.toast-wrap{position:fixed;bottom:18px;right:18px;z-index:999;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--navy-900);color:#F3E7C9;padding:11px 16px;border-radius:10px;font-size:13px;box-shadow:var(--shadow);border-left:4px solid var(--gold-400);animation:pop .18s ease}
+.toast.err{border-color:var(--danger)}
+.toast.ok{border-color:var(--ok)}
+
+/* ---------- Login (PIN) ---------- */
+#loginScreen{
+  position:fixed;inset:0;z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;gap:22px;
+  background:radial-gradient(130% 110% at 50% -10%,var(--maroon-700),var(--navy-900) 65%);
+  padding:20px;
+}
+#loginScreen.show{display:flex}
+.login-card{
+  background:rgba(255,255,255,.06);backdrop-filter:blur(6px);border:1px solid rgba(217,174,85,.25);
+  border-radius:22px;padding:30px 26px 26px;width:100%;max-width:340px;text-align:center;
+  box-shadow:0 30px 60px -20px rgba(0,0,0,.55);
+}
+.login-logo{width:76px;height:76px;object-fit:contain;border-radius:50%;background:#fff;padding:8px;box-shadow:0 8px 20px -6px rgba(0,0,0,.4);margin-bottom:6px}
+.login-card h1{color:#F3E7C9;font-size:19px;margin:6px 0 2px}
+.login-card p{color:#C9BFAE;font-size:12.5px;margin:0 0 18px}
+.pin-dots{display:flex;justify-content:center;gap:12px;margin:0 0 20px}
+.pin-dots span{width:14px;height:14px;border-radius:50%;border:2px solid var(--gold-400);transition:background .12s}
+.pin-dots span.filled{background:var(--gold-400)}
+.pin-dots.shake{animation:shake .35s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.pin-key{
+  aspect-ratio:1;border-radius:16px;border:1px solid rgba(217,174,85,.3);background:rgba(255,255,255,.05);
+  color:#F3E7C9;font-size:19px;font-weight:600;display:flex;align-items:center;justify-content:center;
+}
+.pin-key:active{background:rgba(217,174,85,.25)}
+.pin-key.wide{font-size:13px}
+.login-err{color:#F6B8B8;font-size:12px;min-height:16px;margin-top:12px}
+.login-hint{margin-top:16px;font-size:11px;color:#9C8F82}
+
+/* ---------- Install prompt ---------- */
+.install-bar{
+  position:fixed;left:14px;right:14px;bottom:14px;z-index:400;display:none;align-items:center;gap:12px;
+  background:var(--navy-900);color:#F3E7C9;padding:12px 14px;border-radius:14px;box-shadow:var(--shadow);
+  border:1px solid rgba(217,174,85,.25);
+}
+.install-bar.show{display:flex}
+.install-bar img{width:34px;height:34px;border-radius:9px;object-fit:contain;background:#fff;padding:3px}
+.install-bar .txt{flex:1;font-size:12.5px;line-height:1.35}
+.install-bar .txt b{display:block;font-size:13.5px}
+
+/* ---------- Print area ---------- */
+#printRoot{display:none}
+.doc{background:#fff;padding:26mm 20mm;width:210mm;min-height:297mm;margin:0 auto;color:#111}
+.doc .kop{display:flex;gap:16px;align-items:center;border-bottom:3px double #111;padding-bottom:10px;margin-bottom:4px}
+.doc .kop img{width:70px;height:70px;object-fit:contain}
+.doc .kop .txt{flex:1;text-align:center}
+.doc .kop .txt h2{margin:0;font-size:15px;letter-spacing:.03em}
+.doc .kop .txt h1{margin:2px 0;font-size:19px;letter-spacing:.02em}
+.doc .kop .txt p{margin:1px 0;font-size:11px}
+.doc .title{text-align:center;margin:16px 0 4px;font-size:15px;font-weight:700;text-decoration:underline;text-transform:uppercase}
+.doc .subtitle{text-align:center;font-size:11.5px;margin-bottom:14px}
+.doc table{width:100%;border-collapse:collapse;font-size:10.5px;margin-top:6px}
+.doc table th,.doc table td{border:1px solid #111;padding:5px 6px;text-align:left;vertical-align:top}
+.doc table th{text-align:center;font-weight:700;background:#f2f2f2}
+.doc .ttd-wrap{display:flex;justify-content:space-between;margin-top:34px;font-size:11.5px}
+.doc .ttd-wrap .ttd{width:46%;text-align:center}
+.doc .ttd-wrap .ttd .space{height:60px}
+.doc .ttd-wrap .ttd .nama{font-weight:700;text-decoration:underline}
+.doc .letter-meta{font-size:11.5px;margin:14px 0}
+.doc .letter-meta td{padding:1px 6px 1px 0;vertical-align:top;border:none}
+.doc .letter-body{font-size:12px;line-height:1.7;margin:12px 0}
+@media print{
+  body *{visibility:hidden}
+  #printRoot, #printRoot *{visibility:visible}
+  #printRoot{display:block;position:absolute;left:0;top:0}
+  .doc{box-shadow:none;padding:14mm 16mm;width:auto;min-height:0}
+  @page{size:A4;margin:0}
+}
+
+/* ---------- Responsive ---------- */
+@media(max-width:900px){
+  .sidebar{position:fixed;left:0;top:0;transform:translateX(-100%);transition:transform .2s;z-index:60;box-shadow:0 0 0 2000px rgba(0,0,0,0)}
+  .sidebar.open{transform:translateX(0);box-shadow:0 0 0 2000px rgba(0,0,0,.45)}
+  #menuToggle{display:inline-flex;align-items:center;justify-content:center}
+  #content{padding:14px}
+  .topbar{padding:12px 14px}
+  .search-box input{width:130px}
+}
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <div style="position:relative;display:flex;align-items:center;justify-content:center">
+    <div class="ring"></div>
+    <img id="splash-logo" src="" alt="">
+  </div>
+  <div class="serif" style="font-size:18px;font-weight:700">SIM BPD</div>
+  <p>Memuat data desa…</p>
+</div>
+
+<div id="loginScreen">
+  <div class="login-card">
+    <img class="login-logo" id="loginLogo" src="" alt="Logo">
+    <h1 id="loginTitle">SIM BPD</h1>
+    <p id="loginSub">Masukkan PIN untuk masuk</p>
+    <div class="pin-dots" id="pinDots"></div>
+    <div class="pin-pad" id="pinPad">
+      <button class="pin-key" data-k="1">1</button>
+      <button class="pin-key" data-k="2">2</button>
+      <button class="pin-key" data-k="3">3</button>
+      <button class="pin-key" data-k="4">4</button>
+      <button class="pin-key" data-k="5">5</button>
+      <button class="pin-key" data-k="6">6</button>
+      <button class="pin-key" data-k="7">7</button>
+      <button class="pin-key" data-k="8">8</button>
+      <button class="pin-key" data-k="9">9</button>
+      <button class="pin-key wide" data-k="clear">Hapus</button>
+      <button class="pin-key" data-k="0">0</button>
+      <button class="pin-key wide" data-k="back">⌫</button>
+    </div>
+    <button class="btn btn-gold" id="pinSubmit" style="width:100%;margin-top:14px;justify-content:center" disabled>Masuk</button>
+    <div class="login-err" id="loginErr"></div>
+    <div class="login-hint">Hubungi admin BPD jika belum memiliki PIN</div>
+  </div>
+</div>
+
+<div class="install-bar" id="installBar">
+  <img id="installLogo" src="" alt="">
+  <div class="txt"><b>Install SIM BPD</b>Pasang ke layar utama seperti aplikasi</div>
+  <button class="btn btn-gold btn-sm" id="installBtn">Install</button>
+  <button class="modal-close" id="installClose">✕</button>
+</div>
+
+<div id="app">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main">
+    <div class="topbar">
+      <button id="menuToggle">☰</button>
+      <div>
+        <h1 id="pageTitle">Dashboard</h1>
+        <div class="crumb" id="pageCrumb">Ringkasan</div>
+      </div>
+      <div class="spacer"></div>
+      <span class="offline-pill" id="offlinePill">● Offline</span>
+    </div>
+    <main id="content"></main>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="modal" id="modalBox"></div>
+</div>
+
+<div id="printRoot"></div>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+/* =========================================================
+   SIM BPD — Front-end (bebas host: GitHub Pages / Blogger / dsb)
+   Semua data lewat Apps Script Web App (JSON API), lihat Code.gs
+   ========================================================= */
+
+// >>> WAJIB DIISI: URL Web App hasil deploy Code.gs (diakhiri /exec) <<<
+const API_URL   = 'PASTE_URL_WEBAPP_APPS_SCRIPT_DI_SINI';
+const APP_TOKEN = ''; // isi hanya jika APP_TOKEN di Code.gs diisi juga
+
+const FALLBACK_LOGO = 'data:image/svg+xml;utf8,' + encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+<circle cx="50" cy="50" r="48" fill="#065F46"/>
+<text x="50" y="46" font-family="Georgia,serif" font-size="30" fill="#D9AE55" text-anchor="middle" font-weight="700">BPD</text>
+<text x="50" y="68" font-family="Georgia,serif" font-size="9" fill="#F3E7C9" text-anchor="middle">SIM DESA</text>
+</svg>`);
+
+// Ubah berbagai bentuk link share Google Drive (…/file/d/ID/view, ?id=ID, dst)
+// jadi URL gambar langsung yang bisa dipakai di <img src>.
+function driveDirectUrl(url) {
+  if (!url) return '';
+  const m = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) || url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (m && m[1]) return `https://lh3.googleusercontent.com/d/${m[1]}=w512`;
+  return url; // sudah berupa URL gambar langsung / bukan link Drive
+}
+
+const NAV_GROUPS = [
+  { title: 'Ringkasan', items: [{ id: 'dashboard', label: 'Dashboard' }] },
+  { title: 'Administrasi Surat', items: [
+      { id: 'b1', bukuId: 1, label: 'Agenda Surat Keluar' },
+      { id: 'b2', bukuId: 2, label: 'Agenda Surat Masuk' },
+      { id: 'b3', bukuId: 3, label: 'Buku Ekspedisi' }
+  ]},
+  { title: 'Kelembagaan', items: [
+      { id: 'b7', bukuId: 7, label: 'Data Anggota BPD' },
+      { id: 'b6', bukuId: 6, label: 'Buku Tamu' },
+      { id: 'b10', bukuId: 10, label: 'Daftar Hadir Rapat' },
+      { id: 'b11', bukuId: 11, label: 'Notulen Rapat' }
+  ]},
+  { title: 'Kegiatan & Aspirasi', items: [
+      { id: 'b8', bukuId: 8, label: 'Data Kegiatan BPD' },
+      { id: 'b9', bukuId: 9, label: 'Aspirasi Masyarakat' }
+  ]},
+  { title: 'Keuangan & Aset', items: [
+      { id: 'b5', bukuId: 5, label: 'Laporan Keuangan' },
+      { id: 'b4', bukuId: 4, label: 'Data Inventaris' }
+  ]},
+  { title: 'Regulasi & Musyawarah', items: [
+      { id: 'b12', bukuId: 12, label: 'Peraturan/Keputusan BPD' },
+      { id: 'b13', bukuId: 13, label: 'Peraturan Desa' },
+      { id: 'b14', bukuId: 14, label: 'Keputusan Musyawarah Desa' },
+      { id: 'b15', bukuId: 15, label: 'Rencana Pembangunan Desa' }
+  ]},
+  { title: 'Sistem', items: [{ id: 'settings', label: 'Pengaturan' }] }
+];
+
+let STATE = { meta: null, config: {}, view: 'dashboard', bukuCache: {}, online: navigator.onLine };
+
+/* ---------- API helper ---------- */
+async function api(action, { method = 'GET', params = {}, data = null } = {}) {
+  if (!API_URL || API_URL.indexOf('PASTE_URL') === 0) {
+    throw new Error('API_URL belum diisi di index.html. Tempel URL Web App Apps Script Anda.');
+  }
+  let url = API_URL;
+  if (method === 'GET') {
+    const q = new URLSearchParams({ action, token: APP_TOKEN, ...params });
+    url += '?' + q.toString();
+    const res = await fetch(url);
+    const j = await res.json();
+    if (!j.ok) throw new Error(j.error || 'Gagal memuat data');
+    return j.data;
+  } else {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // hindari CORS preflight
+      body: JSON.stringify({ action, token: APP_TOKEN, ...data })
+    });
+    const j = await res.json();
+    if (!j.ok) throw new Error(j.error || 'Gagal menyimpan data');
+    return j.data;
+  }
+}
+
+/* ---------- Toast ---------- */
+function toast(msg, type = '') {
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  document.getElementById('toastWrap').appendChild(el);
+  setTimeout(() => el.remove(), 3600);
+}
+
+/* ---------- Sesi login (PIN) ---------- */
+function getSession() {
+  try { return JSON.parse(localStorage.getItem('bpd_session') || 'null'); } catch (e) { return null; }
+}
+function setSession(s) { localStorage.setItem('bpd_session', JSON.stringify(s)); }
+function logout() { localStorage.removeItem('bpd_session'); location.reload(); }
+
+let pinBuffer = '';
+function initPinPad() {
+  const dotsWrap = document.getElementById('pinDots');
+  dotsWrap.innerHTML = Array.from({ length: 8 }).map(() => '<span></span>').join('');
+
+  function render() {
+    [...dotsWrap.children].forEach((d, i) => d.classList.toggle('filled', i < pinBuffer.length));
+    document.getElementById('pinSubmit').disabled = pinBuffer.length < 4;
+    document.getElementById('loginErr').textContent = '';
+  }
+  function pressDigit(d) { if (pinBuffer.length < 8) { pinBuffer += d; render(); } }
+  function backspace() { pinBuffer = pinBuffer.slice(0, -1); render(); }
+  function clearAll() { pinBuffer = ''; render(); }
+
+  document.getElementById('pinPad').querySelectorAll('.pin-key').forEach(btn => {
+    btn.onclick = () => {
+      const k = btn.dataset.k;
+      if (k === 'clear') clearAll();
+      else if (k === 'back') backspace();
+      else pressDigit(k);
+    };
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (!document.getElementById('loginScreen').classList.contains('show')) return;
+    if (e.key >= '0' && e.key <= '9') pressDigit(e.key);
+    else if (e.key === 'Backspace') backspace();
+    else if (e.key === 'Enter') attemptLogin();
+  });
+
+  document.getElementById('pinSubmit').onclick = attemptLogin;
+  render();
+}
+
+async function attemptLogin() {
+  if (pinBuffer.length < 4) return;
+  const btn = document.getElementById('pinSubmit');
+  btn.disabled = true; btn.textContent = 'Memeriksa…';
+  try {
+    const data = await api('login', { method: 'POST', data: { pin: pinBuffer } });
+    setSession(data);
+    pinBuffer = '';
+    document.getElementById('loginScreen').classList.remove('show');
+    enterApp();
+  } catch (e) {
+    document.getElementById('loginErr').textContent = e.message;
+    const dots = document.getElementById('pinDots');
+    dots.classList.add('shake');
+    setTimeout(() => dots.classList.remove('shake'), 350);
+    pinBuffer = '';
+    initPinPad();
+  } finally {
+    btn.textContent = 'Masuk'; btn.disabled = pinBuffer.length < 4;
+  }
+}
+
+function enterApp() {
+  renderSidebar();
+  navigate('dashboard');
+  document.getElementById('app').classList.add('ready');
+  document.getElementById('splash').style.display = 'none';
+  maybeShowInstallBar();
+}
+
+/* ---------- Boot ---------- */
+async function boot() {
+  document.getElementById('splash-logo').src = FALLBACK_LOGO;
+  window.addEventListener('online', updateOnlineState);
+  window.addEventListener('offline', updateOnlineState);
+  updateOnlineState();
+  setupInstallPrompt();
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+
+  try {
+    const cachedMeta = localStorage.getItem('bpd_meta');
+    const cachedCfg = localStorage.getItem('bpd_config');
+    if (cachedMeta) STATE.meta = JSON.parse(cachedMeta);
+    if (cachedCfg) STATE.config = JSON.parse(cachedCfg);
+
+    const [meta, config] = await Promise.all([api('getMeta'), api('getConfig')]);
+    STATE.meta = meta; STATE.config = config;
+    localStorage.setItem('bpd_meta', JSON.stringify(meta));
+    localStorage.setItem('bpd_config', JSON.stringify(config));
+  } catch (err) {
+    if (!STATE.meta) {
+      document.getElementById('splash').innerHTML =
+        '<div style="max-width:340px;text-align:center;padding:0 16px">' +
+        '<div class="serif" style="font-size:18px;font-weight:700;margin-bottom:8px">Tidak dapat terhubung</div>' +
+        '<p style="font-size:13px;line-height:1.6">' + escapeHtml(err.message) + '</p></div>';
+      return;
+    }
+    toast('Mode offline: menampilkan data tersimpan terakhir', 'err');
+  }
+
+  applyBranding();
+  document.getElementById('menuToggle').onclick = () => document.getElementById('sidebar').classList.toggle('open');
+
+  const sess = getSession();
+  if (sess) {
+    enterApp();
+  } else {
+    document.getElementById('splash').style.display = 'none';
+    document.getElementById('loginScreen').classList.add('show');
+    initPinPad();
+  }
+}
+
+/* ---------- Install ke layar utama ---------- */
+let deferredInstallPrompt = null;
+function setupInstallPrompt() {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    maybeShowInstallBar();
+  });
+  document.getElementById('installBtn').onclick = async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    document.getElementById('installBar').classList.remove('show');
+  };
+  document.getElementById('installClose').onclick = () => {
+    document.getElementById('installBar').classList.remove('show');
+    sessionStorage.setItem('bpd_install_dismissed', '1');
+  };
+}
+function maybeShowInstallBar() {
+  if (deferredInstallPrompt && !sessionStorage.getItem('bpd_install_dismissed') && document.getElementById('app').classList.contains('ready')) {
+    document.getElementById('installBar').classList.add('show');
+  }
+}
+
+function updateOnlineState() {
+  STATE.online = navigator.onLine;
+  document.getElementById('offlinePill').classList.toggle('show', !STATE.online);
+}
+
+function applyBranding() {
+  const logo = driveDirectUrl(STATE.config.logo_url) || FALLBACK_LOGO;
+  document.getElementById('fav-icon').href = logo;
+  document.getElementById('apple-icon').href = logo;
+  document.getElementById('splash-logo').src = logo;
+  document.getElementById('loginLogo').src = logo;
+  document.getElementById('installLogo').src = logo;
+  const title = 'BPD ' + ((STATE.config.desa || 'Desa').toUpperCase());
+  document.getElementById('loginTitle').textContent = title;
+  generateManifest_(logo);
+}
+
+// Manifest PWA dibuat ulang secara dinamis supaya ikon/nama ikut logo & nama desa
+// yang diatur admin (file manifest.json statis dipakai sebagai fallback awal saja).
+function generateManifest_(logoUrl) {
+  try {
+    const cfg = STATE.config;
+    const manifest = {
+      name: 'SIM BPD ' + (cfg.desa || ''),
+      short_name: 'SIM BPD',
+      description: 'Dashboard administrasi BPD Desa ' + (cfg.desa || ''),
+      start_url: './index.html',
+      scope: './',
+      display: 'standalone',
+      orientation: 'portrait-primary',
+      background_color: '#052E22',
+      theme_color: '#065F46',
+      lang: 'id',
+      icons: [
+        { src: logoUrl, sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: logoUrl, sizes: '512x512', type: 'image/png', purpose: 'any' }
+      ]
+    };
+    const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+    document.querySelector('link[rel="manifest"]').setAttribute('href', URL.createObjectURL(blob));
+  } catch (e) { /* biarkan manifest.json statis dipakai */ }
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+/* ---------- Sidebar ---------- */
+function renderSidebar() {
+  const cfg = STATE.config;
+  let html = `<div class="brand">
+      <img src="${driveDirectUrl(cfg.logo_url) || FALLBACK_LOGO}" alt="Logo">
+      <div>
+        <div class="b-name">BPD ${escapeHtml((cfg.desa || 'Desa').toUpperCase())}</div>
+        <div class="b-sub">Kec. ${escapeHtml(cfg.kecamatan || '-')}, Kab. ${escapeHtml(cfg.kabupaten || '-')}</div>
+      </div>
+    </div>`;
+
+  NAV_GROUPS.forEach(group => {
+    html += `<div class="nav-group"><div class="g-title">${group.title}</div>`;
+    group.items.forEach(item => {
+      const badge = item.bukuId ? String(item.bukuId).padStart(2, '0') : (item.id === 'dashboard' ? '⌂' : '⚙');
+      html += `<button class="nav-item" data-view="${item.id}" data-buku="${item.bukuId || ''}">
+          <span class="ic">${badge}</span>${item.label}
+        </button>`;
+    });
+    html += `</div>`;
+  });
+  const sess = getSession();
+  html += `<div class="sidebar-foot">
+      ${sess ? `Masuk sebagai <b style="color:#F3E7C9">${escapeHtml(sess.nama)}</b> (${escapeHtml(sess.role)})<br>
+      <button class="btn btn-ghost btn-sm" style="margin-top:8px;color:#F3E7C9;border-color:rgba(217,174,85,.3)" onclick="logout()">Keluar</button>` : ''}
+      <div style="margin-top:10px;opacity:.7">SIM BPD · versi 1.0</div>
+    </div>`;
+
+  const side = document.getElementById('sidebar');
+  side.innerHTML = html;
+  side.querySelectorAll('.nav-item').forEach(btn => {
+    btn.onclick = () => {
+      navigate(btn.dataset.buku ? 'buku:' + btn.dataset.buku : btn.dataset.view);
+      side.classList.remove('open');
+    };
+  });
+}
+
+function setActiveNav(view) {
+  document.querySelectorAll('.nav-item').forEach(b => {
+    const match = b.dataset.buku ? 'buku:' + b.dataset.buku === view : b.dataset.view === view;
+    b.classList.toggle('active', match);
+  });
+}
+
+/* ---------- Router ---------- */
+async function navigate(view) {
+  STATE.view = view;
+  setActiveNav(view);
+  const content = document.getElementById('content');
+  content.innerHTML = '<div class="empty-state">Memuat…</div>';
+
+  if (view === 'dashboard') {
+    document.getElementById('pageTitle').textContent = 'Dashboard';
+    document.getElementById('pageCrumb').textContent = 'Ringkasan aktivitas BPD';
+    await renderDashboard();
+  } else if (view === 'settings') {
+    document.getElementById('pageTitle').textContent = 'Pengaturan';
+    document.getElementById('pageCrumb').textContent = 'Profil desa, pengurus & logo';
+    renderSettings();
+  } else if (view.startsWith('buku:')) {
+    const id = Number(view.split(':')[1]);
+    const def = STATE.meta.bukuDefs[id];
+    document.getElementById('pageTitle').textContent = def.title;
+    document.getElementById('pageCrumb').textContent = 'Buku ' + id + ' dari 15 · Badan Permusyawaratan Desa';
+    await renderBuku(id);
+  }
+}
+
+/* ---------- Dashboard ---------- */
+async function renderDashboard() {
+  const content = document.getElementById('content');
+  let sum = {};
+  try { sum = await api('dashboard'); } catch (e) { toast(e.message, 'err'); }
+  const cfg = STATE.config;
+
+  content.innerHTML = `
+    <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center;margin-bottom:22px">
+      <div class="seal">BADAN PERMUSYAWARATAN DESA ${escapeHtml((cfg.desa||'').toUpperCase())}</div>
+      <div>
+        <h2 style="margin:0 0 6px;color:var(--maroon-800)">Selamat bertugas${cfg.ketua ? ', ' + escapeHtml(cfg.ketua) : ''}</h2>
+        <p style="margin:0;color:var(--ink-soft);font-size:13.5px;max-width:520px">
+          Kelola 15 buku administrasi BPD Desa ${escapeHtml(cfg.desa || '-')} dari satu tempat — input cepat,
+          nomor surat otomatis, dan cetak PDF sesuai format resmi.
+        </p>
+      </div>
+    </div>
+    <div class="grid-cards">
+      ${card('Anggota BPD', sum.anggota ?? '-')}
+      ${card('Surat Keluar Bulan Ini', sum.suratKeluarBulanIni ?? '-')}
+      ${card('Surat Masuk Bulan Ini', sum.suratMasukBulanIni ?? '-')}
+      ${card('Kegiatan Bulan Ini', sum.kegiatanBulanIni ?? '-')}
+      ${card('Saldo Keuangan', 'Rp ' + fmtNum(sum.saldo ?? 0))}
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>Mulai cepat</h2></div>
+      <div style="padding:18px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="navigate('buku:1')">✉ Buat Surat Keluar</button>
+        <button class="btn btn-ghost" onclick="navigate('buku:7')">Kelola Data Anggota</button>
+        <button class="btn btn-ghost" onclick="navigate('buku:5')">Catat Keuangan</button>
+        <button class="btn btn-ghost" onclick="navigate('settings')">Atur Profil Desa</button>
+      </div>
+    </div>`;
+}
+function card(k, v) {
+  return `<div class="card"><div class="accent"></div><div class="k">${k}</div><div class="v">${v}</div></div>`;
+}
+function fmtNum(n) { return Number(n || 0).toLocaleString('id-ID'); }
+
+/* ---------- Buku (generic CRUD table) ---------- */
+async function renderBuku(id) {
+  const content = document.getElementById('content');
+  let data;
+  try {
+    data = await api('getBuku', { params: { id } });
+    STATE.bukuCache[id] = data;
+    localStorage.setItem('bpd_buku_' + id, JSON.stringify(data));
+  } catch (e) {
+    const cached = localStorage.getItem('bpd_buku_' + id);
+    if (cached) { data = JSON.parse(cached); toast('Offline — data terakhir tersimpan', 'err'); }
+    else { content.innerHTML = `<div class="empty-state">${escapeHtml(e.message)}</div>`; return; }
+  }
+
+  content.innerHTML = `
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>${escapeHtml(data.title)}</h2>
+          <div class="desc">${data.rows.length} catatan</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="search-box"><input id="searchInput" placeholder="Cari catatan…"></div>
+        <button class="btn btn-ghost" onclick="printBukuLedger(${id})">🖨 Cetak Buku</button>
+        <button class="btn btn-primary" onclick="openRowForm(${id})">+ Tambah Catatan</button>
+      </div>
+      <div class="tbl-wrap"><table id="bukuTable"></table></div>
+    </div>`;
+
+  renderBukuTable(id, data, '');
+  document.getElementById('searchInput').addEventListener('input', (e) => renderBukuTable(id, data, e.target.value));
+}
+
+function renderBukuTable(id, data, q) {
+  const table = document.getElementById('bukuTable');
+  const rows = q ? data.rows.filter(r => JSON.stringify(r).toLowerCase().includes(q.toLowerCase())) : data.rows;
+
+  let thead = '<thead><tr><th>No</th>' + data.fields.map(f => `<th>${escapeHtml(f.l)}</th>`).join('') + '<th>Aksi</th></tr></thead>';
+  let tbody;
+  if (!rows.length) {
+    tbody = `<tbody><tr><td colspan="${data.fields.length + 2}"><div class="empty-state"><div class="ic">🗂</div>Belum ada catatan. Klik "Tambah Catatan" untuk mulai mengisi.</div></td></tr></tbody>`;
+  } else {
+    tbody = '<tbody>' + rows.map((r, i) => {
+      const cells = data.fields.map(f => `<td>${escapeHtml(fmtCell(r[f.k], f.t))}</td>`).join('');
+      let actions = `<button class="btn btn-ghost btn-sm" onclick='openRowForm(${id}, ${JSON.stringify(r).replace(/'/g,"&#39;")})'>Ubah</button>
+        <button class="btn btn-danger btn-sm" onclick="removeRow(${id}, ${r._row})">Hapus</button>`;
+      if (id === 1) actions = `<button class="btn btn-gold btn-sm" onclick='openSuratPreview(${JSON.stringify(r).replace(/'/g,"&#39;")})'>Cetak</button>` + actions;
+      return `<tr><td>${i + 1}</td>${cells}<td class="row-actions">${actions}</td></tr>`;
+    }).join('') + '</tbody>';
+  }
+  table.innerHTML = thead + tbody;
+}
+
+function fmtCell(v, t) {
+  if (v === undefined || v === null || v === '') return '—';
+  if (t === 'number') return fmtNum(v);
+  if (t === 'date') { try { return new Date(v).toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' }); } catch(e){ return v; } }
+  return v;
+}
+
+/* ---------- Form modal (generic, dipakai semua 15 buku) ---------- */
+function openRowForm(id, row) {
+  const def = STATE.meta.bukuDefs[id];
+  const modal = document.getElementById('modalBox');
+  const isEdit = !!row;
+
+  let fieldsHtml = def.fields.map(f => {
+    const val = row ? (row[f.k] ?? '') : '';
+    if (f.t === 'textarea') {
+      return `<div class="field"><label>${f.l}</label><textarea data-k="${f.k}">${escapeHtml(val)}</textarea></div>`;
+    }
+    if (f.t === 'select') {
+      const opts = f.opts.map(o => `<option ${o===val?'selected':''}>${escapeHtml(o)}</option>`).join('');
+      return `<div class="field"><label>${f.l}</label><select data-k="${f.k}"><option value="">– pilih –</option>${opts}</select></div>`;
+    }
+    if (f.auto) {
+      return `<div class="field"><label>${f.l}</label>
+        <div class="nomor-row">
+          <input data-k="${f.k}" type="text" value="${escapeHtml(val)}" placeholder="001/BPD/DESA/BLN/THN">
+          <button type="button" class="btn btn-gold btn-sm" onclick="autoNomor(${id})">Buat Otomatis</button>
+        </div>
+        <div class="hint">Format baku: urut/BPD/DESA/bulan-romawi/tahun. Klik "Buat Otomatis" setelah mengisi tanggal surat.</div>
+      </div>`;
+    }
+    const inputType = f.t === 'date' ? 'date' : (f.t === 'number' ? 'number' : 'text');
+    return `<div class="field"><label>${f.l}</label><input data-k="${f.k}" type="${inputType}" value="${escapeHtml(val)}"></div>`;
+  }).join('');
+
+  modal.innerHTML = `
+    <div class="modal-head"><h3>${isEdit ? 'Ubah' : 'Tambah'} — ${escapeHtml(def.title)}</h3><div class="spacer"></div>
+      <button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body"><form id="rowForm">${fieldsHtml}</form></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Batal</button>
+      <button class="btn btn-primary" id="saveBtn">${isEdit ? 'Simpan Perubahan' : 'Simpan'}</button>
+    </div>`;
+
+  document.getElementById('overlay').classList.add('show');
+
+  // navigasi cepat: Enter pindah ke field berikutnya, kecuali di textarea
+  const form = document.getElementById('rowForm');
+  const inputs = [...form.querySelectorAll('input,select,textarea')];
+  inputs.forEach((el, idx) => {
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && el.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        (inputs[idx + 1] || document.getElementById('saveBtn')).focus();
+      }
+    });
+  });
+  if (inputs[0]) inputs[0].focus();
+
+  document.getElementById('saveBtn').onclick = async () => {
+    const data = {};
+    inputs.forEach(el => data[el.dataset.k] = el.value);
+    try {
+      if (isEdit) { await api('updateRow', { method: 'POST', data: { id, rowIndex: row._row, data } }); toast('Perubahan disimpan', 'ok'); }
+      else { await api('addRow', { method: 'POST', data: { id, data } }); toast('Catatan ditambahkan', 'ok'); }
+      closeModal();
+      renderBuku(id);
+    } catch (e) { toast(e.message, 'err'); }
+  };
+}
+
+async function autoNomor(id) {
+  const form = document.getElementById('rowForm');
+  const tglEl = form.querySelector('[data-k="tanggal_surat"]');
+  const nomorEl = form.querySelector('[data-k="nomor"]');
+  try {
+    const res = await api('nextNomor', { params: { tanggal: tglEl && tglEl.value ? tglEl.value : '' } });
+    nomorEl.value = res.nomor;
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+async function removeRow(id, rowIndex) {
+  if (!confirm('Hapus catatan ini? Tindakan tidak dapat dibatalkan.')) return;
+  try {
+    await api('deleteRow', { method: 'POST', data: { id, rowIndex } });
+    toast('Catatan dihapus', 'ok');
+    renderBuku(id);
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+function closeModal() { document.getElementById('overlay').classList.remove('show'); }
+document.getElementById('overlay').addEventListener('click', (e) => { if (e.target.id === 'overlay') closeModal(); });
+
+/* ---------- Pengaturan ---------- */
+function renderSettings() {
+  const content = document.getElementById('content');
+  const cfg = STATE.config;
+  const groups = {
+    'Profil Wilayah': ['desa','kecamatan','kabupaten','provinsi','alamat','telp','email'],
+    'Pengurus BPD': ['ketua','waket','sekretaris','anggota1','anggota2','anggota3','anggota4','anggota5','anggota6'],
+    'Tampilan & Penomoran Surat': ['logo_url','kode_surat']
+  };
+  const labelOf = k => (STATE.meta.configKeys.find(c => c[0] === k) || [k, k])[1];
+
+  let html = '<div class="panel"><div class="panel-head"><h2>Pengaturan</h2><div class="desc">Data ini otomatis dipakai pada kop surat & tanda tangan.</div></div><div style="padding:18px">';
+  Object.entries(groups).forEach(([title, keys]) => {
+    html += `<h3 style="font-size:14px;color:var(--maroon-800);margin:18px 0 10px">${title}</h3><div class="settings-grid">`;
+    keys.forEach(k => {
+      html += `<div class="field"><label>${labelOf(k)}</label><input data-k="${k}" value="${escapeHtml(cfg[k] || '')}"></div>`;
+    });
+    html += `</div>`;
+  });
+  html += `<div style="display:flex;gap:10px;align-items:center;margin-top:8px">
+      <img src="${driveDirectUrl(cfg.logo_url) || FALLBACK_LOGO}" style="width:52px;height:52px;object-fit:contain;border:1px solid var(--paper-line);border-radius:10px;padding:4px" id="logoPreview">
+      <span style="font-size:12px;color:var(--ink-soft)">Pratinjau logo. Tempel link share Drive biasa (…/file/d/ID/view) — otomatis dikonversi. Pastikan berbagi diatur "Siapa saja yang memiliki link".</span>
+    </div>
+    <div style="margin-top:20px"><button class="btn btn-primary" id="saveSettingsBtn">Simpan Pengaturan</button></div>
+  </div></div>`;
+
+  const sess = getSession();
+  if (sess && sess.role === 'Admin') {
+    html += `<div class="panel" style="margin-top:18px">
+      <div class="panel-head">
+        <div><h2>Manajemen Pengguna</h2><div class="desc">Kelola siapa saja yang bisa masuk memakai PIN</div></div>
+        <div class="spacer"></div>
+        <button class="btn btn-primary" id="addUserBtn">+ Tambah Pengguna</button>
+      </div>
+      <div class="tbl-wrap"><table id="usersTable"></table></div>
+    </div>`;
+  }
+
+  content.innerHTML = html;
+
+  content.querySelector('[data-k="logo_url"]').addEventListener('input', (e) => {
+    document.getElementById('logoPreview').src = driveDirectUrl(e.target.value) || FALLBACK_LOGO;
+  });
+
+  document.getElementById('saveSettingsBtn').onclick = async () => {
+    const data = {};
+    content.querySelectorAll('[data-k]').forEach(el => data[el.dataset.k] = el.value);
+    try {
+      await api('saveConfig', { method: 'POST', data: { data } });
+      STATE.config = { ...STATE.config, ...data };
+      localStorage.setItem('bpd_config', JSON.stringify(STATE.config));
+      applyBranding();
+      renderSidebar();
+      setActiveNav('settings');
+      toast('Pengaturan disimpan', 'ok');
+    } catch (e) { toast(e.message, 'err'); }
+  };
+
+  if (sess && sess.role === 'Admin') {
+    document.getElementById('addUserBtn').onclick = () => openUserForm();
+    loadUsersTable();
+  }
+}
+
+/* ---------- Manajemen Pengguna ---------- */
+async function loadUsersTable() {
+  const table = document.getElementById('usersTable');
+  if (!table) return;
+  try {
+    const users = await api('listUsers');
+    let thead = '<thead><tr><th>Nama</th><th>Role</th><th>Status</th><th>Aksi</th></tr></thead>';
+    let tbody = '<tbody>' + users.map(u => `<tr>
+        <td>${escapeHtml(u.nama)}</td>
+        <td><span class="badge">${escapeHtml(u.role)}</span></td>
+        <td>${u.aktif ? '✅ Aktif' : '⛔ Nonaktif'}</td>
+        <td class="row-actions">
+          <button class="btn btn-ghost btn-sm" onclick='openUserForm(${JSON.stringify(u).replace(/'/g,"&#39;")})'>Ubah</button>
+          <button class="btn btn-danger btn-sm" onclick="removeUser(${u._row})">Hapus</button>
+        </td></tr>`).join('') + '</tbody>';
+    table.innerHTML = thead + tbody;
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+function openUserForm(user) {
+  const modal = document.getElementById('modalBox');
+  const isEdit = !!user;
+  modal.innerHTML = `
+    <div class="modal-head"><h3>${isEdit ? 'Ubah' : 'Tambah'} Pengguna</h3><div class="spacer"></div>
+      <button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Nama</label><input id="u-nama" value="${isEdit ? escapeHtml(user.nama) : ''}"></div>
+      <div class="field"><label>PIN (4-8 digit angka)${isEdit ? ' — kosongkan jika tidak diubah' : ''}</label>
+        <input id="u-pin" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="8" placeholder="${isEdit ? '••••••' : 'contoh: 245981'}"></div>
+      <div class="field"><label>Role</label>
+        <select id="u-role">
+          <option value="Admin" ${isEdit && user.role==='Admin' ? 'selected' : ''}>Admin (bisa kelola pengguna)</option>
+          <option value="Petugas" ${isEdit && user.role==='Petugas' ? 'selected' : ''}>Petugas (input & cetak saja)</option>
+        </select></div>
+      <div class="field"><label><input type="checkbox" id="u-aktif" style="width:auto;margin-right:6px" ${!isEdit || user.aktif ? 'checked' : ''}>Akun aktif</label></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Batal</button>
+      <button class="btn btn-primary" id="saveUserBtn">Simpan</button>
+    </div>`;
+  document.getElementById('overlay').classList.add('show');
+
+  document.getElementById('saveUserBtn').onclick = async () => {
+    const data = {
+      nama: document.getElementById('u-nama').value.trim(),
+      pin: document.getElementById('u-pin').value.trim(),
+      role: document.getElementById('u-role').value,
+      aktif: document.getElementById('u-aktif').checked
+    };
+    if (!data.nama) return toast('Nama wajib diisi', 'err');
+    if (!isEdit && !data.pin) return toast('PIN wajib diisi', 'err');
+    if (data.pin && !/^[0-9]{4,8}$/.test(data.pin)) return toast('PIN harus 4-8 digit angka', 'err');
+    try {
+      if (isEdit) await api('updateUser', { method: 'POST', data: { rowIndex: user._row, data } });
+      else await api('addUser', { method: 'POST', data: { data } });
+      toast('Pengguna disimpan', 'ok');
+      closeModal();
+      loadUsersTable();
+    } catch (e) { toast(e.message, 'err'); }
+  };
+}
+
+async function removeUser(rowIndex) {
+  if (!confirm('Hapus pengguna ini? PIN-nya tidak akan bisa dipakai lagi.')) return;
+  try {
+    await api('deleteUser', { method: 'POST', data: { rowIndex } });
+    toast('Pengguna dihapus', 'ok');
+    loadUsersTable();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+/* ---------- Cetak / PDF ---------- */
+function kopSuratHtml() {
+  const c = STATE.config;
+  const logo = driveDirectUrl(c.logo_url) || FALLBACK_LOGO;
+  return `<div class="kop">
+    <img src="${logo}" alt="Logo">
+    <div class="txt">
+      <h2>PEMERINTAH KABUPATEN ${escapeHtml((c.kabupaten||'').toUpperCase())}</h2>
+      <h2>KECAMATAN ${escapeHtml((c.kecamatan||'').toUpperCase())}</h2>
+      <h1>BADAN PERMUSYAWARATAN DESA (BPD)</h1>
+      <h1>DESA ${escapeHtml((c.desa||'').toUpperCase())}</h1>
+      <p>${escapeHtml(c.alamat || '')} ${c.telp ? '· Telp/WA ' + escapeHtml(c.telp) : ''} ${c.email ? '· ' + escapeHtml(c.email) : ''}</p>
+    </div>
+    <img src="${logo}" alt="Logo">
+  </div>`;
+}
+
+function todayId() {
+  return new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function printBukuLedger(id) {
+  const data = STATE.bukuCache[id];
+  if (!data) return toast('Data belum dimuat', 'err');
+  const c = STATE.config;
+
+  const theadCols = data.fields.map(f => `<th>${escapeHtml(f.l)}</th>`).join('');
+  const bodyRows = data.rows.map((r, i) =>
+    `<tr><td style="text-align:center">${i + 1}</td>${data.fields.map(f => `<td>${escapeHtml(fmtCell(r[f.k], f.t))}</td>`).join('')}</tr>`
+  ).join('') || `<tr><td colspan="${data.fields.length + 1}" style="text-align:center">— Belum ada catatan —</td></tr>`;
+
+  const doc = `<div class="doc">
+    ${kopSuratHtml()}
+    <div class="title">${escapeHtml(data.title)}</div>
+    <div class="subtitle">Badan Permusyawaratan Desa ${escapeHtml(c.desa || '')}, Kecamatan ${escapeHtml(c.kecamatan || '')}, Kabupaten ${escapeHtml(c.kabupaten || '')}</div>
+    <table><thead><tr><th style="width:26px">No</th>${theadCols}</tr></thead><tbody>${bodyRows}</tbody></table>
+    <div class="ttd-wrap">
+      <div class="ttd"><div>Sekretaris BPD ${escapeHtml(c.desa || '')}</div><div class="space"></div><div class="nama">${escapeHtml((c.sekretaris||'-').toUpperCase())}</div></div>
+      <div class="ttd"><div>${escapeHtml(c.desa || '')}, ${todayId()}</div><div>Ketua BPD ${escapeHtml(c.desa || '')}</div><div class="space"></div><div class="nama">${escapeHtml((c.ketua||'-').toUpperCase())}</div></div>
+    </div>
+  </div>`;
+
+  document.getElementById('printRoot').innerHTML = doc;
+  setTimeout(() => window.print(), 80);
+}
+
+function openSuratPreview(row) {
+  const modal = document.getElementById('modalBox');
+  const c = STATE.config;
+  const defaultBody = `Sehubungan dengan ${row.hal ? '"' + row.hal + '"' : 'hal tersebut di atas'}, bersama ini kami sampaikan kepada Bapak/Ibu untuk dapat ditindaklanjuti sebagaimana mestinya.`;
+
+  modal.innerHTML = `
+    <div class="modal-head"><h3>Cetak Surat Keluar — ${escapeHtml(row.nomor || '(belum ada nomor)')}</h3><div class="spacer"></div>
+      <button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Yth. (Tujuan)</label><input id="ps-tujuan" value="${escapeHtml(row.tujuan || '')}"></div>
+      <div class="field"><label>Perihal</label><input id="ps-perihal" value="${escapeHtml(row.hal || '')}"></div>
+      <div class="field"><label>Isi Surat</label><textarea id="ps-body" style="min-height:130px">${escapeHtml(defaultBody)}</textarea></div>
+      <div class="hint">Nomor &amp; tanggal surat mengikuti data pada Buku Agenda Surat Keluar.</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal()">Batal</button>
+      <button class="btn btn-gold" id="doPrintSurat">🖨 Cetak / Simpan PDF</button>
+    </div>`;
+  document.getElementById('overlay').classList.add('show');
+
+  document.getElementById('doPrintSurat').onclick = () => {
+    const tujuan = document.getElementById('ps-tujuan').value;
+    const perihal = document.getElementById('ps-perihal').value;
+    const body = document.getElementById('ps-body').value;
+    const tglSurat = row.tanggal_surat ? new Date(row.tanggal_surat).toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' }) : todayId();
+
+    const doc = `<div class="doc">
+      ${kopSuratHtml()}
+      <table class="letter-meta">
+        <tr><td style="width:70px">Nomor</td><td style="width:10px">:</td><td>${escapeHtml(row.nomor || '-')}</td>
+            <td style="width:80px;padding-left:40px">${escapeHtml(c.desa||'')}, ${tglSurat}</td></tr>
+        <tr><td>Lampiran</td><td>:</td><td>-</td><td></td></tr>
+        <tr><td>Perihal</td><td>:</td><td><b>${escapeHtml(perihal || '-')}</b></td><td></td></tr>
+      </table>
+      <table class="letter-meta" style="margin-top:14px"><tr><td>Kepada Yth.</td></tr><tr><td><b>${escapeHtml(tujuan || '-')}</b></td></tr><tr><td>di Tempat</td></tr></table>
+      <div class="letter-body">${escapeHtml(body).replace(/\\n/g, '<br>')}</div>
+      <div class="ttd-wrap">
+        <div class="ttd"></div>
+        <div class="ttd"><div>Ketua BPD ${escapeHtml(c.desa || '')}</div><div class="space"></div><div class="nama">${escapeHtml((c.ketua||'-').toUpperCase())}</div></div>
+      </div>
+    </div>`;
+    document.getElementById('printRoot').innerHTML = doc;
+    closeModal();
+    setTimeout(() => window.print(), 80);
+  };
+}
+
+boot();
+</script>
+</body>
+</html>
