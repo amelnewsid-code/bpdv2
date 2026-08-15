@@ -265,13 +265,18 @@ tbody tr:hover{background:#FCFAF2}
 .doc .letter-meta{font-size:11.5px;margin:14px 0}
 .doc .letter-meta td{padding:1px 6px 1px 0;vertical-align:top;border:none}
 .doc .letter-body{font-size:12px;line-height:1.7;margin:12px 0}
+.doc.landscape{width:297mm}
+.doc.landscape table{font-size:11px}
 @media print{
   body *{visibility:hidden}
   #printRoot, #printRoot *{visibility:visible}
   #printRoot{display:block;position:absolute;left:0;top:0}
   .doc{box-shadow:none;padding:14mm 16mm;width:auto;min-height:0}
-  @page{size:A4;margin:0}
+  @page{size:A4 portrait;margin:0}
+  .doc.landscape{padding:12mm 16mm}
 }
+@media print and (orientation: landscape){}
+#pagesizeStyle{}
 
 /* ---------- Responsive ---------- */
 @media(max-width:900px){
@@ -358,7 +363,7 @@ tbody tr:hover{background:#FCFAF2}
    ========================================================= */
 
 // >>> WAJIB DIISI: URL Web App hasil deploy Code.gs (diakhiri /exec) <<<
-const API_URL   = 'https://script.google.com/macros/s/AKfycbyOcei-naCt5gcEZoPZRIPOjN9_LZ4JPqTukEbm1teasIHQr4QTtF3azoWt3GUNQ_5paw/exec';
+const API_URL   = 'https://script.google.com/macros/s/AKfycbx7zwtpbnYvAPtrh7ENcY8Q2o_GKSzrjNlQ_H-E6csrEFX7Wpk-jurExa669McLj6IsiA/exec';
 const APP_TOKEN = ''; // isi hanya jika APP_TOKEN di Code.gs diisi juga
 
 const FALLBACK_LOGO = 'data:image/svg+xml;utf8,' + encodeURIComponent(`
@@ -1024,6 +1029,41 @@ async function removeUser(rowIndex) {
 }
 
 /* ---------- Cetak / PDF ---------- */
+function setPrintOrientation(orientation) {
+  let style = document.getElementById('dynamicPageStyle');
+  if (!style) {
+    style = document.createElement('style');
+    style.id = 'dynamicPageStyle';
+    document.head.appendChild(style);
+  }
+  style.textContent = orientation === 'landscape'
+    ? '@page{size:A4 landscape;margin:10mm}'
+    : '@page{size:A4 portrait;margin:0}';
+}
+
+// Modal kecil untuk memilih orientasi sebelum mencetak — mencegah tabel lebar (mis. Buku Inventaris) terpotong.
+function askOrientation(title, onChoose, suggestLandscape) {
+  const modal = document.getElementById('modalBox');
+  modal.innerHTML = `
+    <div class="modal-head"><h3>${escapeHtml(title)}</h3><div class="spacer"></div>
+      <button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--ink-soft);margin-top:0">Pilih orientasi kertas supaya isi tabel tidak terpotong.</p>
+      <div style="display:flex;gap:12px">
+        <button class="btn btn-ghost" style="flex:1;flex-direction:column;height:96px;gap:6px" id="opPotrait">
+          <div style="width:34px;height:46px;border:2px solid var(--maroon-700);border-radius:4px"></div>Potrait
+        </button>
+        <button class="btn btn-ghost" style="flex:1;flex-direction:column;height:96px;gap:6px" id="opLandscape">
+          <div style="width:46px;height:34px;border:2px solid var(--maroon-700);border-radius:4px"></div>Landscape
+        </button>
+      </div>
+      ${suggestLandscape ? '<div class="hint" style="margin-top:12px">💡 Buku ini memiliki banyak kolom — Landscape disarankan.</div>' : ''}
+    </div>`;
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('opPotrait').onclick = () => { closeModal(); onChoose('portrait'); };
+  document.getElementById('opLandscape').onclick = () => { closeModal(); onChoose('landscape'); };
+}
+
 function kopSuratHtml() {
   const c = STATE.config;
   const logo = driveDirectUrl(c.logo_url) || FALLBACK_LOGO;
@@ -1036,7 +1076,6 @@ function kopSuratHtml() {
       <h1>DESA ${escapeHtml((c.desa||'').toUpperCase())}</h1>
       <p>${escapeHtml(c.alamat || '')} ${c.telp ? '· Telp/WA ' + escapeHtml(c.telp) : ''} ${c.email ? '· ' + escapeHtml(c.email) : ''}</p>
     </div>
-    <img src="${logo}" alt="Logo">
   </div>`;
 }
 
@@ -1047,6 +1086,12 @@ function todayId() {
 function printBukuLedger(id) {
   const data = STATE.bukuCache[id];
   if (!data) return toast('Data belum dimuat', 'err');
+
+  askOrientation('Cetak ' + data.title, (orientation) => renderBukuLedgerDoc(id, orientation), data.fields.length > 6);
+}
+
+function renderBukuLedgerDoc(id, orientation) {
+  const data = STATE.bukuCache[id];
   const c = STATE.config;
 
   const theadCols = data.fields.map(f => `<th>${escapeHtml(f.l)}</th>`).join('');
@@ -1054,7 +1099,7 @@ function printBukuLedger(id) {
     `<tr><td style="text-align:center">${i + 1}</td>${data.fields.map(f => `<td>${escapeHtml(fmtCell(r[f.k], f.t))}</td>`).join('')}</tr>`
   ).join('') || `<tr><td colspan="${data.fields.length + 1}" style="text-align:center">— Belum ada catatan —</td></tr>`;
 
-  const doc = `<div class="doc">
+  const doc = `<div class="doc ${orientation === 'landscape' ? 'landscape' : ''}">
     ${kopSuratHtml()}
     <div class="title">${escapeHtml(data.title)}</div>
     <div class="subtitle">Badan Permusyawaratan Desa ${escapeHtml(c.desa || '')}, Kecamatan ${escapeHtml(c.kecamatan || '')}, Kabupaten ${escapeHtml(c.kabupaten || '')}</div>
@@ -1066,6 +1111,7 @@ function printBukuLedger(id) {
   </div>`;
 
   document.getElementById('printRoot').innerHTML = doc;
+  setPrintOrientation(orientation);
   setTimeout(() => window.print(), 80);
 }
 
@@ -1095,24 +1141,26 @@ function openSuratPreview(row) {
     const body = document.getElementById('ps-body').value;
     const tglSurat = row.tanggal_surat ? new Date(row.tanggal_surat).toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' }) : todayId();
 
-    const doc = `<div class="doc">
-      ${kopSuratHtml()}
-      <table class="letter-meta">
-        <tr><td style="width:70px">Nomor</td><td style="width:10px">:</td><td>${escapeHtml(row.nomor || '-')}</td>
-            <td style="width:80px;padding-left:40px">${escapeHtml(c.desa||'')}, ${tglSurat}</td></tr>
-        <tr><td>Lampiran</td><td>:</td><td>-</td><td></td></tr>
-        <tr><td>Perihal</td><td>:</td><td><b>${escapeHtml(perihal || '-')}</b></td><td></td></tr>
-      </table>
-      <table class="letter-meta" style="margin-top:14px"><tr><td>Kepada Yth.</td></tr><tr><td><b>${escapeHtml(tujuan || '-')}</b></td></tr><tr><td>di Tempat</td></tr></table>
-      <div class="letter-body">${escapeHtml(body).replace(/\\n/g, '<br>')}</div>
-      <div class="ttd-wrap">
-        <div class="ttd"></div>
-        <div class="ttd"><div>Ketua BPD ${escapeHtml(c.desa || '')}</div><div class="space"></div><div class="nama">${escapeHtml((c.ketua||'-').toUpperCase())}</div></div>
-      </div>
-    </div>`;
-    document.getElementById('printRoot').innerHTML = doc;
-    closeModal();
-    setTimeout(() => window.print(), 80);
+    askOrientation('Cetak Surat', (orientation) => {
+      const doc = `<div class="doc ${orientation === 'landscape' ? 'landscape' : ''}">
+        ${kopSuratHtml()}
+        <table class="letter-meta">
+          <tr><td style="width:70px">Nomor</td><td style="width:10px">:</td><td>${escapeHtml(row.nomor || '-')}</td>
+              <td style="width:80px;padding-left:40px">${escapeHtml(c.desa||'')}, ${tglSurat}</td></tr>
+          <tr><td>Lampiran</td><td>:</td><td>-</td><td></td></tr>
+          <tr><td>Perihal</td><td>:</td><td><b>${escapeHtml(perihal || '-')}</b></td><td></td></tr>
+        </table>
+        <table class="letter-meta" style="margin-top:14px"><tr><td>Kepada Yth.</td></tr><tr><td><b>${escapeHtml(tujuan || '-')}</b></td></tr><tr><td>di Tempat</td></tr></table>
+        <div class="letter-body">${escapeHtml(body).replace(/\n/g, '<br>')}</div>
+        <div class="ttd-wrap">
+          <div class="ttd"></div>
+          <div class="ttd"><div>Ketua BPD ${escapeHtml(c.desa || '')}</div><div class="space"></div><div class="nama">${escapeHtml((c.ketua||'-').toUpperCase())}</div></div>
+        </div>
+      </div>`;
+      document.getElementById('printRoot').innerHTML = doc;
+      setPrintOrientation(orientation);
+      setTimeout(() => window.print(), 80);
+    }, false);
   };
 }
 
